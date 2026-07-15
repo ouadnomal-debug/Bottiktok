@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Testeur de site — Bots</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: #12181f;
+    color: #EDEFF2;
+    font-family: 'IBM Plex Sans', sans-serif;
+    padding: 32px 20px;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(24px, 4vw, 34px);
+    margin-bottom: 6px;
+  }
+  p.sub { color: #9AA4B2; margin-top: 0; margin-bottom: 28px; }
+  .card {
+    background: #171E27;
+    border: 1px solid #262E38;
+    border-radius: 12px;
+    padding: 22px;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    color: #9AA4B2;
+    margin-bottom: 6px;
+    margin-top: 16px;
+  }
+  label:first-of-type { margin-top: 0; }
+  input[type="text"], input[type="number"] {
+    width: 100%;
+    background: #0F141A;
+    border: 1px solid #262E38;
+    border-radius: 7px;
+    padding: 11px 12px;
+    color: #EDEFF2;
+    font-size: 14px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  input:focus { outline: 2px solid #E8A33D; outline-offset: 1px; }
+  button {
+    margin-top: 22px;
+    width: 100%;
+    background: #E8A33D;
+    color: #12181f;
+    border: none;
+    border-radius: 7px;
+    padding: 13px;
+    font-size: 14.5px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  button:disabled { opacity: 0.6; cursor: not-allowed; }
+  #results { margin-top: 26px; display: flex; flex-direction: column; gap: 10px; }
+  .bot-result {
+    background: #1E2733;
+    border-left: 3px solid #6B7280;
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-size: 13.5px;
+  }
+  .bot-result.submitted { border-left-color: #8FBF7F; }
+  .bot-result.error { border-left-color: #E8735E; }
+  .bot-result.no-form, .bot-result.no-submit-button { border-left-color: #D4B04A; }
+  .bot-result .head { font-family: 'IBM Plex Mono', monospace; font-weight: 500; margin-bottom: 4px; }
+  .bot-result .steps { color: #9AA4B2; font-size: 12.5px; line-height: 1.5; }
+  #error { color: #E8735E; margin-top: 14px; font-size: 13.5px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Testeur de site</h1>
+    <p class="sub">Entre l'URL de ton site et le nombre de bots à envoyer pour tester le formulaire.</p>
+
+    <div class="card">
+      <label for="url">URL du site</label>
+      <input type="text" id="url" placeholder="https://monsite.com" />
+
+      <label for="count">Nombre de bots (1 à 10)</label>
+      <input type="number" id="count" min="1" max="10" value="3" />
+
+      <button id="launch">Lancer les bots</button>
+      <div id="error"></div>
+    </div>
+
+    <div id="results"></div>
+  </div>
+
+<script>
+  const btn = document.getElementById('launch');
+  const resultsEl = document.getElementById('results');
+  const errorEl = document.getElementById('error');
+
+  const statusLabels = {
+    submitted: "Formulaire soumis avec succès",
+    'no-form': "Aucun formulaire trouvé",
+    'no-submit-button': "Aucun bouton d'envoi trouvé",
+    error: "Erreur pendant le test"
+  };
+
+  btn.addEventListener('click', async () => {
+    const url = document.getElementById('url').value.trim();
+    const count = document.getElementById('count').value;
+    errorEl.textContent = '';
+    resultsEl.innerHTML = '';
+
+    if (!url) {
+      errorEl.textContent = "Entre une URL avant de lancer les bots.";
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Bots en action...";
+
+    try {
+      const res = await fetch('/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, count })
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        errorEl.textContent = data.error;
+      } else {
+        data.results.forEach((r) => {
+          const div = document.createElement('div');
+          div.className = 'bot-result ' + r.status;
+          div.innerHTML = `<div class="head">Bot ${r.botId} — ${statusLabels[r.status] || r.status}</div>
+                            <div class="steps">${r.steps.join('<br>')}</div>`;
+          resultsEl.appendChild(div);
+        });
+      }
+    } catch (e) {
+      errorEl.textContent = "Impossible de contacter le serveur : " + e.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Lancer les bots";
+    }
+  });
+</script>
+</body>
+</html>
