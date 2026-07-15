@@ -16,7 +16,8 @@ const fs = require("fs");
 const path = require("path");
 const { chromium } = require("playwright");
 
-const PORT = 3000;
+const const PORT = process.env.PORT || 3000;
+
 
 function testValueFor({ type, name, id, placeholder }) {
   const t = (type || "text").toLowerCase();
